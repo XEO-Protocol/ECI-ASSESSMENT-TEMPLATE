@@ -1,0 +1,91 @@
+# ECI ASSESSMENT TEMPLATE
+
+**Containment Maturity Framework · Assessment Instrument · v1.0**
+
+---
+
+> This integration plan is itself operating at ECI-2. The assessment layer provides detection. Enforcement of ECI-informed decision-making will be considered only after repeated use demonstrates which parts of the assessment process are load-bearing.
+
+---
+
+## Header
+
+| Field | Value |
+|---|---|
+| **System / Project** | |
+| **Date** | |
+| **Assessor** | |
+| **Scope Boundary** | |
+| **Current Rating** | |
+| **Target Rating** | |
+
+---
+
+## Entropy Path
+
+Answer each question for the system within the declared scope boundary.
+
+**Where can invalid state enter?**
+
+
+**How far can it travel?**
+
+
+**Where is it detected?**
+
+
+**Where is it blocked?**
+
+
+**Who or what resolves it?**
+
+
+---
+
+## Current Rating Evidence
+
+What proves the current rating? Cite specific mechanisms, not intentions.
+
+
+
+---
+
+## Next-Level Disqualifier
+
+What prevents the next ECI level? Identify the specific disqualifier from the CMF diagnostic questions (Section 6.2).
+
+
+
+---
+
+## Improvement Classification
+
+**Horizontal Improvements** (capability at current level):
+
+
+**Vertical Improvements** (reduced entropy distance or added enforcement):
+
+
+---
+
+## Decision
+
+Mark one:
+
+- [ ] Current rating confirmed
+- [ ] Rating claim rejected — evidence insufficient
+- [ ] Vertical work recommended — path to next level identified
+- [ ] Horizontal work acceptable but not maturity-advancing
+
+---
+
+## Rating Disagreement Rule
+
+If an ECI rating is disputed, resolve the dispute by applying the disqualifier test.
+
+If any disqualifier for the claimed level applies, the lower rating stands. No partial credit. No "nearly ECI-3" unless explicitly marked as informal transition language. No maturity claim may override a live disqualifier.
+
+---
+
+*Containment Maturity Framework · v1.0*
+*Alan Riley Holdings Ltd · XEO Protocol*
