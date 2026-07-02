@@ -1,0 +1,9 @@
+fastapi>=0.110
+uvicorn>=0.29
+numpy>=1.26
+pillow>=10.0
+httpx>=0.27
+pydantic>=2.6
+
+# Optional: real webcam capture (the synthetic demo camera works without it)
+# opencv-python>=4.9
