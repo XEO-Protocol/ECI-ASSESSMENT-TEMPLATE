@@ -123,8 +123,8 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
             checked={local.mock_demo_cycle}
             onChange={(e) => set('mock_demo_cycle', e.target.checked)}
           />
-          Demo cycle (mock provider periodically simulates falls, stove, smoke and
-          door events so you can see the full pipeline)
+          Demo cycle (mock provider periodically simulates falls, lying-still,
+          smoke and door events so you can see the full pipeline)
         </label>
       </section>
 

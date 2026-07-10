@@ -106,6 +106,15 @@ safety-monitor/
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the pipeline, the extension
 points for real vision models, and the agent integration contract.
 
+Project direction and handoff docs:
+
+- [MASTER_PLAN.md](./MASTER_PLAN.md) — everything done and everything
+  planned, through the full Trinity system (cameras · desktop · phone app
+  with agent reports).
+- [BUILD_STATUS.md](./BUILD_STATUS.md) — verified build state, exact
+  build/run/test commands, code tour, pitfalls, and the task queue for any
+  successor builder.
+
 ## Privacy & safety posture
 
 - **No cloud by default.** The backend binds to `127.0.0.1`. The only way

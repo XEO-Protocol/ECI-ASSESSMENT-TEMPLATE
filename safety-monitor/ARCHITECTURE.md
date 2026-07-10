@@ -42,6 +42,29 @@
 7. **Fan-out** — the event is pushed to the desktop app over WebSocket
    (notifications, timeline) and dispatched to agent hooks.
 
+## The CameraSource contract
+
+New camera types (network cameras, ingest nodes) plug in here
+(`camera_sources.py`):
+
+```python
+class CameraSource(ABC):
+    def read(self) -> np.ndarray | None: ...   # called from a worker thread
+    def close(self) -> None: ...
+```
+
+- `read()` is **synchronous** (the worker wraps it in `asyncio.to_thread`)
+  and returns the **most recent complete frame** as an RGB `uint8` array of
+  shape `(H, W, 3)` — streaming sources must drop stale frames, not queue
+  them, so the worker's cadence (not the camera's) drives analysis.
+- Return `None` for a transient failure ("no signal"); **raise** from the
+  constructor if the source can't open at all. Note: today a failed open
+  ends the camera's worker without retry (Phase 1 in MASTER_PLAN.md adds
+  health states + reconnect).
+- Register new types in `create_source()` and extend
+  `CameraSettings.source_type` in `models.py` (mirror in the desktop's
+  `types.ts`).
+
 ## Extension point 1: real vision models
 
 `vision.py` defines the whole contract:
