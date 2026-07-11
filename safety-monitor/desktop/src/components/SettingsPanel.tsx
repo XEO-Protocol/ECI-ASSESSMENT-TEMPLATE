@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api';
+import { TrashIcon } from '../icons';
 import type { Settings } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -45,10 +46,19 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
 
   return (
     <div className="settings">
-      <section>
+      <section className="card">
         <h3>Monitoring</h3>
-        <label>
-          Analysis interval: {local.capture_interval_seconds.toFixed(1)}s
+        <p className="card-desc">
+          How often frames are analyzed and how readily motion is flagged.
+        </p>
+
+        <div className="field">
+          <span className="field-label">
+            Analysis interval
+            <span className="value-chip">
+              {local.capture_interval_seconds.toFixed(1)}s
+            </span>
+          </span>
           <input
             type="range"
             min={0.5}
@@ -58,10 +68,17 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
             onChange={(e) =>
               set('capture_interval_seconds', Number(e.target.value))
             }
+            aria-label="Analysis interval in seconds"
           />
-        </label>
-        <label>
-          Motion sensitivity: {Math.round(local.motion_sensitivity * 100)}%
+        </div>
+
+        <div className="field">
+          <span className="field-label">
+            Motion sensitivity
+            <span className="value-chip">
+              {Math.round(local.motion_sensitivity * 100)}%
+            </span>
+          </span>
           <input
             type="range"
             min={0}
@@ -69,72 +86,88 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
             step={0.05}
             value={local.motion_sensitivity}
             onChange={(e) => set('motion_sensitivity', Number(e.target.value))}
+            aria-label="Motion sensitivity"
           />
-        </label>
-        <label>
-          Night hours (for unusual-motion alerts):
-          <span className="inline-inputs">
-            <input
-              type="number"
-              min={0}
-              max={23}
-              value={local.night_start_hour}
-              onChange={(e) => set('night_start_hour', Number(e.target.value))}
-            />
-            to
-            <input
-              type="number"
-              min={0}
-              max={23}
-              value={local.night_end_hour}
-              onChange={(e) => set('night_end_hour', Number(e.target.value))}
-            />
-          </span>
-        </label>
-        <label>
-          Lying-still alert after (seconds):
+        </div>
+
+        <div className="field-inline">
+          <span>Night hours (for unusual-motion alerts)</span>
+          <input
+            type="number"
+            min={0}
+            max={23}
+            value={local.night_start_hour}
+            onChange={(e) => set('night_start_hour', Number(e.target.value))}
+            aria-label="Night start hour"
+          />
+          <span className="hint">to</span>
+          <input
+            type="number"
+            min={0}
+            max={23}
+            value={local.night_end_hour}
+            onChange={(e) => set('night_end_hour', Number(e.target.value))}
+            aria-label="Night end hour"
+          />
+        </div>
+
+        <div className="field-inline">
+          <span>Lying-still alert after</span>
           <input
             type="number"
             min={30}
             value={local.lying_still_seconds}
             onChange={(e) => set('lying_still_seconds', Number(e.target.value))}
+            aria-label="Lying still threshold in seconds"
           />
-        </label>
-        <label>
+          <span className="hint">seconds</span>
+        </div>
+
+        <div className="field-inline">
           <input
+            id="notif"
             type="checkbox"
             checked={local.notifications_enabled}
             onChange={(e) => set('notifications_enabled', e.target.checked)}
           />
-          Desktop notifications
-        </label>
+          <label htmlFor="notif">Desktop notifications</label>
+        </div>
       </section>
 
-      <section>
+      <section className="card">
         <h3>AI analysis</h3>
-        <p className="hint">
+        <p className="card-desc">
           Provider: <code>{local.ai_provider}</code> — the MVP ships with mock
-          analysis (simulated detections). Real local vision models plug in via
-          the VisionProvider interface in the backend.
+          analysis (simulated detections). Real local vision models plug in
+          via the VisionProvider interface in the backend.
         </p>
-        <label>
+        <div className="field-inline">
           <input
+            id="democycle"
             type="checkbox"
             checked={local.mock_demo_cycle}
             onChange={(e) => set('mock_demo_cycle', e.target.checked)}
           />
-          Demo cycle (mock provider periodically simulates falls, lying-still,
-          smoke and door events so you can see the full pipeline)
-        </label>
+          <label htmlFor="democycle">
+            Demo cycle (mock provider periodically simulates falls,
+            lying-still, smoke and door events so you can see the full
+            pipeline)
+          </label>
+        </div>
       </section>
 
-      <section>
+      <section className="card">
         <h3>Cameras</h3>
+        <p className="card-desc">
+          Sources marked simulated are always watermarked in the live view.
+        </p>
         {local.cameras.map((camera, i) => (
           <div key={camera.id} className="camera-row">
             <input
+              className="grow"
               value={camera.name}
               onChange={(e) => setCamera(i, { name: e.target.value })}
+              aria-label="Camera name"
             />
             <select
               value={camera.source_type}
@@ -143,6 +176,7 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
                   source_type: e.target.value as 'webcam' | 'synthetic',
                 })
               }
+              aria-label="Camera source"
             >
               <option value="synthetic">Synthetic (demo)</option>
               <option value="webcam">Webcam (requires OpenCV)</option>
@@ -158,7 +192,7 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
                 }
               />
             )}
-            <label>
+            <label className="field-inline" style={{ marginBottom: 0 }}>
               <input
                 type="checkbox"
                 checked={camera.enabled}
@@ -170,21 +204,21 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
         ))}
       </section>
 
-      <div className="settings-actions">
+      <div className="actions-row">
         <button className="btn-primary" onClick={() => void save()}>
           Save settings
         </button>
         {status && <span className="hint">{status}</span>}
       </div>
 
-      <section className="danger-zone">
+      <section className="card danger-card">
         <h3>Privacy &amp; data</h3>
-        <p className="hint">
+        <p className="card-desc">
           Everything is stored locally (events database, snapshots, clips).
           Nothing is uploaded anywhere.
         </p>
-        <button className="btn-danger" onClick={() => setConfirmDelete(true)}>
-          Delete all history…
+        <button className="btn-danger-outline" onClick={() => setConfirmDelete(true)}>
+          <TrashIcon size={14} /> Delete all history…
         </button>
       </section>
 

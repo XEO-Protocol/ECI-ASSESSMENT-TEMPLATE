@@ -1,5 +1,5 @@
 fastapi>=0.110
-uvicorn>=0.29
+uvicorn[standard]>=0.29  # [standard] pulls the websockets lib the /ws/events push needs
 numpy>=1.26
 pillow>=10.0
 httpx>=0.27

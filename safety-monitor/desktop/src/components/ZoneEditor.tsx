@@ -9,15 +9,10 @@ interface ZoneEditorProps {
 
 type ZoneKind = 'mask' | 'restricted';
 
-const KIND_INFO: Record<ZoneKind, { color: string; help: string }> = {
-  mask: {
-    color: 'rgba(0, 0, 0, 0.75)',
-    help: 'Mask zones are blacked out before analysis, storage or streaming — those pixels never leave the pipeline.',
-  },
-  restricted: {
-    color: 'rgba(255, 90, 90, 0.35)',
-    help: 'Restricted zones raise a warning when a person appears to enter them (e.g. stairs, front door, medicine cabinet).',
-  },
+const KIND_HELP: Record<ZoneKind, string> = {
+  mask: 'Privacy masks are blacked out before analysis, storage or streaming — those pixels never leave the pipeline.',
+  restricted:
+    'Restricted zones raise a warning when a person appears to enter them (stairs, front door, medicine cabinet).',
 };
 
 interface Draft {
@@ -114,7 +109,7 @@ export function ZoneEditor({ cameras, onSaved }: ZoneEditorProps) {
 
   return (
     <div className="zone-editor">
-      <div className="zone-toolbar">
+      <div className="zone-bar">
         {enabled.length > 1 && (
           <select
             value={cameraIdx}
@@ -127,7 +122,7 @@ export function ZoneEditor({ cameras, onSaved }: ZoneEditorProps) {
             ))}
           </select>
         )}
-        <div className="camera-tabs">
+        <div className="seg" role="tablist" aria-label="Zone type">
           <button
             className={kind === 'mask' ? 'active' : ''}
             onClick={() => setKind('mask')}
@@ -141,12 +136,16 @@ export function ZoneEditor({ cameras, onSaved }: ZoneEditorProps) {
             Restricted zones
           </button>
         </div>
+        <span className="spacer" />
+        {status && <span className="zone-status">{status}</span>}
         <button className="btn-primary" onClick={() => void save()}>
           Save zones
         </button>
-        {status && <span className="hint">{status}</span>}
       </div>
-      <p className="hint">{KIND_INFO[kind].help} Drag on the image to add a zone.</p>
+
+      <p className="zone-help">
+        {KIND_HELP[kind]} Drag on the image to add a zone.
+      </p>
 
       <div
         className="zone-canvas"
@@ -163,18 +162,20 @@ export function ZoneEditor({ cameras, onSaved }: ZoneEditorProps) {
         {zones.map((zone, i) => (
           <div
             key={zone.id ?? i}
-            className="zone-rect"
+            className={`zone-rect ${kind}`}
             style={{
               left: `${zone.x * 100}%`,
               top: `${zone.y * 100}%`,
               width: `${zone.w * 100}%`,
               height: `${zone.h * 100}%`,
-              background: KIND_INFO[kind].color,
             }}
           >
-            <span>{zone.label || (kind === 'mask' ? 'masked' : 'zone')}</span>
+            <span className="zone-tag">
+              {zone.label || (kind === 'mask' ? 'masked' : 'zone')}
+            </span>
             <button
-              className="zone-delete"
+              className="zone-x"
+              title="Remove zone"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => setZones(zones.filter((_, j) => j !== i))}
             >

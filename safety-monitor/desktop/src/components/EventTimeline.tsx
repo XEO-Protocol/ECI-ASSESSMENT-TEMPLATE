@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { api, eventSnapshotUrl } from '../api';
+import { AgentIcon, CheckIcon, SeverityIcon } from '../icons';
 import type { EventType, SafetyEvent } from '../types';
 import { EVENT_TYPE_LABELS } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -8,8 +9,6 @@ interface EventTimelineProps {
   events: SafetyEvent[];
   onAcknowledge: (id: string) => void;
 }
-
-const SEVERITY_ICON = { info: 'ℹ️', warning: '⚠️', alert: '🚨' } as const;
 
 function dayLabel(ts: number): string {
   const date = new Date(ts * 1000);
@@ -66,7 +65,21 @@ export function EventTimeline({ events, onAcknowledge }: EventTimelineProps) {
 
   return (
     <div className="timeline">
-      <div className="timeline-filters">
+      <div className="filters">
+        <div className="seg" role="tablist" aria-label="Review filter">
+          <button
+            className={unackedOnly ? '' : 'active'}
+            onClick={() => setUnackedOnly(false)}
+          >
+            All
+          </button>
+          <button
+            className={unackedOnly ? 'active' : ''}
+            onClick={() => setUnackedOnly(true)}
+          >
+            Unreviewed
+          </button>
+        </div>
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value as EventType | 'all')}
@@ -78,14 +91,9 @@ export function EventTimeline({ events, onAcknowledge }: EventTimelineProps) {
             </option>
           ))}
         </select>
-        <label>
-          <input
-            type="checkbox"
-            checked={unackedOnly}
-            onChange={(e) => setUnackedOnly(e.target.checked)}
-          />
-          Unreviewed only
-        </label>
+        <span className="filter-count">
+          {filtered.length} event{filtered.length === 1 ? '' : 's'}
+        </span>
       </div>
 
       {actionResult && (
@@ -94,61 +102,98 @@ export function EventTimeline({ events, onAcknowledge }: EventTimelineProps) {
         </div>
       )}
 
-      {groups.length === 0 && <p className="empty">No events yet.</p>}
+      {groups.length === 0 && (
+        <p className="empty">
+          No events yet. When something appears worth your attention, it shows
+          up here with a snapshot.
+        </p>
+      )}
 
       {groups.map(([day, dayEvents]) => (
         <section key={day}>
-          <h3 className="day-header">{day}</h3>
+          <h3 className="day-head microcaps">{day}</h3>
           {dayEvents.map((event) => (
             <article
               key={event.id}
-              className={`event severity-${event.severity} ${event.acknowledged ? 'acked' : ''}`}
+              className={`event-card sev-${event.severity} ${
+                event.acknowledged ? 'acked' : ''
+              }`}
             >
-              {event.snapshot_path && (
+              <span className="sev-rail" aria-hidden />
+              {event.snapshot_path ? (
                 <img
-                  className="event-thumb"
+                  className="thumb"
                   src={eventSnapshotUrl(event.id)}
                   alt="Event snapshot"
                   loading="lazy"
                 />
+              ) : (
+                <span />
               )}
-              <div className="event-body">
-                <header>
-                  <span className="event-icon">
-                    {SEVERITY_ICON[event.severity]}
+              <div className="ev-body">
+                <header className="ev-head">
+                  <span className="sev-ico">
+                    <SeverityIcon severity={event.severity} size={17} />
                   </span>
-                  <strong>{EVENT_TYPE_LABELS[event.type]}</strong>
+                  <span className="ev-type">
+                    {EVENT_TYPE_LABELS[event.type]}
+                  </span>
                   <time>
                     {new Date(event.created_at * 1000).toLocaleTimeString()}
                   </time>
-                  <span className="confidence">
+                  <span
+                    className="conf"
+                    title="Approximate confidence — never a certainty"
+                  >
+                    <span className="meter" aria-hidden>
+                      <i
+                        style={{
+                          width: `${Math.round(event.confidence * 100)}%`,
+                        }}
+                      />
+                    </span>
                     ~{Math.round(event.confidence * 100)}%
                   </span>
                 </header>
-                <p>{event.message}</p>
+
+                <p className="ev-msg">{event.message}</p>
+
                 {event.agent_assessment && (
                   <div className="assessment">
-                    <strong>
-                      Agent assessment ({event.agent_assessment.agent_name},
-                      risk: {event.agent_assessment.risk_level})
-                    </strong>
+                    <div className="assessment-head">
+                      <AgentIcon size={14} />
+                      <span>{event.agent_assessment.agent_name}</span>
+                      <span
+                        className={`risk-chip risk-${event.agent_assessment.risk_level}`}
+                      >
+                        risk: {event.agent_assessment.risk_level}
+                      </span>
+                    </div>
                     <p>{event.agent_assessment.summary}</p>
                     {event.agent_assessment.recommended_action && (
-                      <p className="hint">
+                      <span className="hint">
                         Suggested: {event.agent_assessment.recommended_action}
-                      </p>
+                      </span>
                     )}
                   </div>
                 )}
-                <footer>
-                  {!event.acknowledged && (
-                    <button onClick={() => onAcknowledge(event.id)}>
-                      Mark reviewed
+
+                <footer className="ev-foot">
+                  {event.acknowledged ? (
+                    <span className="reviewed-chip">
+                      <CheckIcon size={13} /> Reviewed
+                    </span>
+                  ) : (
+                    <button
+                      className="btn-ghost"
+                      onClick={() => onAcknowledge(event.id)}
+                    >
+                      <CheckIcon size={14} /> Mark reviewed
                     </button>
                   )}
                   {event.severity === 'alert' && (
                     <button
-                      className="btn-danger"
+                      className="btn-danger-outline"
                       onClick={() => setEmergencyFor(event)}
                     >
                       Emergency action…
