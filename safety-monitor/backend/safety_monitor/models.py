@@ -113,9 +113,10 @@ class AgentAssessment(BaseModel):
 class CameraSettings(BaseModel):
     id: str = Field(default_factory=lambda: uuid.uuid4().hex[:8])
     name: str = "Camera"
-    source_type: Literal["webcam", "synthetic", "mjpeg"] = "synthetic"
+    source_type: Literal["webcam", "synthetic", "mjpeg", "phone"] = "synthetic"
     device_index: int = 0
     url: str = ""  # mjpeg only: http(s) URL of the network camera stream
+    device_key: str = ""  # phone only: per-device stream secret (local settings)
     enabled: bool = True
     mask_zones: list[Zone] = Field(default_factory=list)
     restricted_zones: list[Zone] = Field(default_factory=list)

@@ -225,6 +225,58 @@ class MjpegSource(CameraSource):
         self._thread.join(timeout=3.0)
 
 
+class PhoneSource(CameraSource):
+    """A paired phone/tablet pushing JPEG frames to the hub over WebSocket.
+
+    Passive: the /ws/phone/{camera_id} handler validates, decodes and
+    bounds incoming frames, then calls push(). read() serves only the
+    latest frame and reports "no signal" once the phone stops sending
+    (locked screen, closed page, network drop) — never a stale frame.
+    """
+
+    STALE_AFTER = 6.0
+    MAX_FRAME_BYTES = 8 * 1024 * 1024
+    MAX_DIM = 4096
+    DOWNSCALE_TO = 1280
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._latest: np.ndarray | None = None
+        self._latest_ts = 0.0
+
+    @classmethod
+    def decode_jpeg_bounded(cls, data: bytes) -> np.ndarray | None:
+        """Decode one pushed JPEG within hard bounds; None if unacceptable."""
+        import io
+
+        from PIL import Image
+
+        if not data or len(data) > cls.MAX_FRAME_BYTES:
+            return None
+        try:
+            img = Image.open(io.BytesIO(data))
+            if img.width > cls.MAX_DIM or img.height > cls.MAX_DIM:
+                return None
+            if max(img.width, img.height) > cls.DOWNSCALE_TO:
+                img.thumbnail((cls.DOWNSCALE_TO, cls.DOWNSCALE_TO))
+            return np.asarray(img.convert("RGB"))
+        except Exception:
+            return None
+
+    def push(self, frame: np.ndarray) -> None:
+        with self._lock:
+            self._latest = frame
+            self._latest_ts = time.monotonic()
+
+    def read(self) -> np.ndarray | None:
+        with self._lock:
+            if self._latest is None:
+                return None
+            if time.monotonic() - self._latest_ts > self.STALE_AFTER:
+                return None
+            return self._latest
+
+
 def create_source(
     source_type: str, device_index: int = 0, url: str = ""
 ) -> CameraSource:
@@ -236,4 +288,6 @@ def create_source(
         if not url:
             raise RuntimeError("MJPEG camera needs a stream URL (set it in Settings)")
         return MjpegSource(url)
+    if source_type == "phone":
+        return PhoneSource()
     raise ValueError(f"Unknown camera source type: {source_type}")

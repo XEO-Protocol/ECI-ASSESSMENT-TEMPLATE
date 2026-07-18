@@ -3,6 +3,7 @@ import { api } from '../api';
 import { TrashIcon } from '../icons';
 import type { Settings, VisionStatus } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
+import { PairingDialog } from './PairingDialog';
 
 interface SettingsPanelProps {
   settings: Settings;
@@ -14,6 +15,26 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
   const [status, setStatus] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [vision, setVision] = useState<VisionStatus | null>(null);
+  const [pairing, setPairing] = useState(false);
+  const [removeCameraId, setRemoveCameraId] = useState<string | null>(null);
+
+  const refreshSettings = async () => {
+    const fresh = await api.getSettings();
+    setLocal(fresh);
+    onChange(fresh);
+  };
+
+  const removeCamera = async () => {
+    if (!removeCameraId) return;
+    setRemoveCameraId(null);
+    try {
+      await api.deleteCamera(removeCameraId);
+      await refreshSettings();
+      setStatus('Camera removed.');
+    } catch (err) {
+      setStatus(`Remove failed: ${String(err)}`);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -213,6 +234,7 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
         <h3>Cameras</h3>
         <p className="card-desc">
           Sources marked simulated are always watermarked in the live view.
+          Phones and tablets pair by QR code — no app install needed.
         </p>
         {local.cameras.map((camera, i) => (
           <div key={camera.id} className="camera-row">
@@ -222,22 +244,28 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
               onChange={(e) => setCamera(i, { name: e.target.value })}
               aria-label="Camera name"
             />
-            <select
-              value={camera.source_type}
-              onChange={(e) =>
-                setCamera(i, {
-                  source_type: e.target.value as
-                    | 'webcam'
-                    | 'synthetic'
-                    | 'mjpeg',
-                })
-              }
-              aria-label="Camera source"
-            >
-              <option value="synthetic">Synthetic (demo)</option>
-              <option value="webcam">Webcam (requires OpenCV)</option>
-              <option value="mjpeg">Network camera (MJPEG stream)</option>
-            </select>
+            {camera.source_type === 'phone' ? (
+              <span className="chip chip-live" title="Paired via QR code">
+                <span className="dot" aria-hidden /> Paired phone
+              </span>
+            ) : (
+              <select
+                value={camera.source_type}
+                onChange={(e) =>
+                  setCamera(i, {
+                    source_type: e.target.value as
+                      | 'webcam'
+                      | 'synthetic'
+                      | 'mjpeg',
+                  })
+                }
+                aria-label="Camera source"
+              >
+                <option value="synthetic">Synthetic (demo)</option>
+                <option value="webcam">Webcam (requires OpenCV)</option>
+                <option value="mjpeg">Network camera (MJPEG stream)</option>
+              </select>
+            )}
             {camera.source_type === 'webcam' && (
               <input
                 type="number"
@@ -266,8 +294,20 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
               />
               Enabled
             </label>
+            <button
+              className="btn-ghost icon-only"
+              title={`Remove ${camera.name}`}
+              onClick={() => setRemoveCameraId(camera.id)}
+            >
+              <TrashIcon size={14} />
+            </button>
           </div>
         ))}
+        <div className="actions-row" style={{ marginTop: 10 }}>
+          <button className="btn" onClick={() => setPairing(true)}>
+            Add phone or tablet…
+          </button>
+        </div>
       </section>
 
       <div className="actions-row">
@@ -296,6 +336,24 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
           danger
           onConfirm={() => void deleteHistory()}
           onCancel={() => setConfirmDelete(false)}
+        />
+      )}
+
+      {removeCameraId && (
+        <ConfirmDialog
+          title="Remove this camera?"
+          message="The camera stops streaming and disappears from the live view. Its recorded events stay in the timeline. A paired phone would need to scan a new QR code to come back."
+          confirmLabel="Remove camera"
+          danger
+          onConfirm={() => void removeCamera()}
+          onCancel={() => setRemoveCameraId(null)}
+        />
+      )}
+
+      {pairing && (
+        <PairingDialog
+          onPaired={() => void refreshSettings()}
+          onClose={() => setPairing(false)}
         />
       )}
     </div>

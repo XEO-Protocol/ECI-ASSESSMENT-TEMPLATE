@@ -9,17 +9,57 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 from . import __version__
 from .agent_hook import AgentGateway, AgentWebhook
+from .camera_sources import PhoneSource
 from .config import ConfigStore
 from .manager import CameraManager
 from .models import AgentAssessment, CameraSettings, Event, Settings, Zone
+from .pairing import PAIRING_TTL, PairingManager, lan_ip, new_device_key
+from .phone_page import PHONE_PAGE
 from .store import EventStore
 
 logger = logging.getLogger(__name__)
+
+
+class PhoneSurfaceApp:
+    """ASGI wrapper exposing ONLY the phone-camera surface.
+
+    The LAN-facing HTTPS listener wraps the app in this, so a device on
+    the network can reach the pairing page, the claim endpoint and the
+    frame websocket — and nothing else. The full API stays loopback-only.
+    """
+
+    ALLOWED_HTTP_PREFIXES = ("/pair/", "/phone-camera", "/api/pairing/claim")
+    ALLOWED_WS_PREFIXES = ("/ws/phone/",)
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            path = scope.get("path", "")
+            if any(path.startswith(p) for p in self.ALLOWED_HTTP_PREFIXES):
+                return await self.app(scope, receive, send)
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 404,
+                    "headers": [(b"content-type", b"text/plain")],
+                }
+            )
+            await send({"type": "http.response.body", "body": b"not found"})
+            return
+        if scope["type"] == "websocket":
+            path = scope.get("path", "")
+            if any(path.startswith(p) for p in self.ALLOWED_WS_PREFIXES):
+                return await self.app(scope, receive, send)
+            await send({"type": "websocket.close", "code": 4404})
+            return
+        return await self.app(scope, receive, send)
 
 
 class WebSocketHub:
@@ -75,6 +115,11 @@ class WebhookRequest(BaseModel):
     url: str
 
 
+class PairingClaimRequest(BaseModel):
+    token: str
+    name: str = "Phone camera"
+
+
 def create_app(data_dir: Path | None = None) -> FastAPI:
     config = ConfigStore(data_dir)
     store = EventStore(
@@ -82,6 +127,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     )
     hub = WebSocketHub()
     gateway = AgentGateway()
+    pairing = PairingManager()
 
     async def on_event(event: Event) -> None:
         await hub.broadcast({"kind": "event", "event": event.model_dump(mode="json")})
@@ -350,6 +396,112 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
             }
         )
         return {"executed": body.action, "event_id": event.id}
+
+    # --- phone pairing ------------------------------------------------------------------
+
+    def phone_base_url() -> str:
+        configured = getattr(app.state, "phone_base_url", None)
+        return configured or f"http://{lan_ip()}:8765"
+
+    @app.post("/api/pairing/start")
+    async def pairing_start():
+        entry = pairing.start()
+        return {
+            "token": entry.token,
+            "url": f"{phone_base_url()}/pair/{entry.token}",
+            "expires_in": int(PAIRING_TTL),
+        }
+
+    @app.get("/api/pairing/{token}")
+    async def pairing_status(token: str):
+        return pairing.status(token)
+
+    @app.get("/api/pairing/{token}/qr.png")
+    async def pairing_qr(token: str):
+        if pairing.get(token) is None:
+            raise HTTPException(404, "Pairing code expired — start again")
+        import io
+
+        import qrcode
+
+        img = qrcode.make(f"{phone_base_url()}/pair/{token}")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return Response(buf.getvalue(), media_type="image/png")
+
+    @app.post("/api/pairing/claim")
+    async def pairing_claim(body: PairingClaimRequest):
+        entry = pairing.get(body.token)
+        if entry is None or entry.claimed_camera_id:
+            raise HTTPException(
+                410, "Pairing code expired or already used"
+            )
+        camera = CameraSettings(
+            name=body.name.strip()[:60] or "Phone camera",
+            source_type="phone",
+            device_key=new_device_key(),
+        )
+        previous = config.settings.cameras
+        config.settings.cameras.append(camera)
+        config.save()
+        pairing.claim(body.token, camera.id)
+        await manager.apply_settings(previous)
+        logger.info("paired phone camera %s (%r)", camera.id, camera.name)
+        return {
+            "camera_id": camera.id,
+            "device_key": camera.device_key,
+            "name": camera.name,
+        }
+
+    @app.get("/pair/{token}", response_class=HTMLResponse)
+    async def pair_page(token: str):
+        if pairing.get(token) is None:
+            return HTMLResponse(
+                "<h3 style='font-family:system-ui;padding:2rem'>Pairing link expired."
+                "<br>Open the desktop app and generate a fresh QR code.</h3>",
+                status_code=410,
+            )
+        return HTMLResponse(PHONE_PAGE)
+
+    @app.get("/phone-camera", response_class=HTMLResponse)
+    async def phone_camera_page():
+        # resume page for already-paired devices (credentials in localStorage)
+        return HTMLResponse(PHONE_PAGE)
+
+    @app.websocket("/ws/phone/{camera_id}")
+    async def ws_phone(ws: WebSocket, camera_id: str):
+        await ws.accept()
+        camera = next(
+            (c for c in config.settings.cameras if c.id == camera_id), None
+        )
+        if camera is None or camera.source_type != "phone" or not camera.device_key:
+            await ws.close(code=4401)
+            return
+        try:
+            first = await asyncio.wait_for(ws.receive_json(), timeout=10.0)
+        except Exception:
+            await ws.close(code=4400)
+            return
+        import secrets as _secrets
+
+        if not _secrets.compare_digest(
+            str(first.get("device_key", "")), camera.device_key
+        ):
+            await ws.close(code=4401)
+            return
+
+        try:
+            while True:
+                data = await ws.receive_bytes()
+                worker = manager.worker(camera_id)
+                if worker is None:  # camera deleted or disabled mid-stream
+                    await ws.close(code=4401)
+                    return
+                frame = await asyncio.to_thread(PhoneSource.decode_jpeg_bounded, data)
+                if frame is not None and isinstance(worker.source, PhoneSource):
+                    worker.source.push(frame)
+        except WebSocketDisconnect:
+            pass
 
     # --- websocket ---------------------------------------------------------------------
 

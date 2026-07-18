@@ -20,6 +20,17 @@ export const api = {
       '/api/health',
     ),
   getSettings: () => request<Settings>('/api/settings'),
+  startPairing: () =>
+    request<{ token: string; url: string; expires_in: number }>(
+      '/api/pairing/start',
+      { method: 'POST' },
+    ),
+  pairingStatus: (token: string) =>
+    request<{ status: 'pending' | 'claimed' | 'expired'; camera_id?: string }>(
+      `/api/pairing/${token}`,
+    ),
+  deleteCamera: (id: string) =>
+    request(`/api/cameras/${id}`, { method: 'DELETE' }),
   putSettings: (settings: Settings) =>
     request<Settings>('/api/settings', {
       method: 'PUT',

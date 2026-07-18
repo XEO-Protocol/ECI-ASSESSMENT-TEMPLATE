@@ -1246,6 +1246,69 @@ input[type='checkbox'] {
   margin-top: 18px;
 }
 
+/* pairing dialog */
+.dialog.pairing {
+  width: min(480px, calc(100vw - 48px));
+}
+.qr-wrap {
+  display: grid;
+  place-items: center;
+  background: #fff; /* QR codes need light ground in both themes */
+  border-radius: 10px;
+  padding: 14px;
+  margin: 14px 0;
+}
+.pairing-steps {
+  margin: 0 0 10px;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pairing-url {
+  font-size: 12px;
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+.dialog .status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.spinner.small {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
+.pairing-error {
+  color: var(--alert);
+}
+.pairing-done {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 8px;
+}
+.pairing-check {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.btn-ghost.icon-only {
+  padding: 7px 8px;
+}
+
 /* ============================================================
    Boot / backend-unavailable (no mock content, ever)
    ============================================================ */

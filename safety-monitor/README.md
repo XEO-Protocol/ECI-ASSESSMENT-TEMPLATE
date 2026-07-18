@@ -78,6 +78,22 @@ pip install opencv-python
 
 then switch the camera's source to "Webcam" in Settings.
 
+**Pair a phone or tablet by QR code (recommended, no app install):** in
+the desktop app go to Settings → Cameras → **"Add phone or tablet…"**.
+Scan the QR code with the device, accept the one-time certificate
+warning (the link is your own hub; a locally generated self-signed cert
+makes the camera page HTTPS, which phone browsers require for camera
+access), name the camera, tap **Start camera**. The device streams JPEG
+frames over an authenticated WebSocket to the hub — LAN only, no cloud,
+no account. Pairing tokens are single-use and expire after 10 minutes;
+each device gets its own 256-bit stream key, revoked by removing the
+camera. The LAN-facing HTTPS listener exposes *only* the phone surface
+(pairing page, claim endpoint, frame socket) — the full API stays
+loopback-only. Keep the device plugged in with auto-lock off; if it
+stops sending, the live view shows "no signal" rather than a stale
+frame. Re-open `https://<hub-ip>:8766/phone-camera` on the device to
+resume a previous pairing.
+
 **Phone / tablet / IP camera (MJPEG over the LAN):** any device that can
 serve its camera as an MJPEG HTTP stream works as a camera source — an
 iPad or phone running an "IP camera" app, an ESP32-cam, or a Linux box
