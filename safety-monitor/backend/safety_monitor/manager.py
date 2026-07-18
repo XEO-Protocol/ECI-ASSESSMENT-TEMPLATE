@@ -30,7 +30,12 @@ from .models import CameraSettings, Event
 from .motion import MotionDetector
 from .rules import RuleEngine
 from .store import EventStore
-from .vision import AnalysisContext, VisionProvider, create_provider
+from .vision import (
+    AnalysisContext,
+    UnavailableVisionProvider,
+    VisionProvider,
+    create_provider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -191,11 +196,40 @@ class CameraManager:
         self.gateway = gateway
         self.on_event = on_event
         self.rules = RuleEngine()
-        self.provider = create_provider(
-            config.settings.ai_provider,
-            mock_demo_cycle=config.settings.mock_demo_cycle,
-        )
+        self.provider: VisionProvider
+        self.provider_error: str | None = None
+        self._create_provider()
         self.workers: dict[str, CameraWorker] = {}
+
+    def _create_provider(self) -> None:
+        """Create the configured provider; on failure of a REAL provider,
+        run with no analysis (never a mock fallback) and surface the error."""
+        settings = self.config.settings
+        models_dir = settings.models_dir or str(self.config.data_dir / "models")
+        try:
+            self.provider = create_provider(
+                settings.ai_provider,
+                mock_demo_cycle=settings.mock_demo_cycle,
+                models_dir=models_dir,
+            )
+            self.provider_error = None
+        except Exception as exc:
+            self.provider_error = str(exc)
+            self.provider = UnavailableVisionProvider(settings.ai_provider, str(exc))
+            logger.error(
+                "vision provider %r failed to load — AI analysis is OFF, "
+                "no simulated fallback: %s",
+                settings.ai_provider,
+                exc,
+            )
+
+    async def reload_provider(self) -> None:
+        """Swap providers after a settings change (mock <-> onnx etc.)."""
+        old = self.provider
+        self._create_provider()
+        for worker in self.workers.values():
+            worker.provider = self.provider
+        await old.close()
 
     async def start(self) -> None:
         for camera in self.config.settings.cameras:

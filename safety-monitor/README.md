@@ -23,8 +23,11 @@ claims certainty and never acts without your confirmation.
 - **Desktop notifications** for warnings and alerts.
 - **Privacy controls:** pause camera, mask zones (blacked out *before*
   analysis or storage), recording on/off, delete all history.
-- **Modular AI provider interface** — the MVP ships with a mock provider;
-  real local vision models plug into one small interface.
+- **Real on-device vision** — ships with two providers: `mock` (simulated
+  detections for demos) and `local` (REAL person detection + 33-keypoint
+  pose via MediaPipe, fully offline on CPU). If a real model fails to
+  load, analysis turns visibly OFF — the app never substitutes simulated
+  detections for a broken real provider.
 - **Agent hook interface** — an external agent can receive events, inspect
   the frames around them, and return an assessment that shows up in the
   timeline. Emergency-style actions always require explicit user
@@ -75,6 +78,20 @@ pip install opencv-python
 
 then switch the camera's source to "Webcam" in Settings.
 
+To use **real vision detection** instead of the mock (person presence,
+posture and fall analysis from actual models, all on-device):
+
+```bash
+cd backend
+pip install -r requirements-vision.txt   # MediaPipe runtime
+python scripts/download_models.py        # one-time, checksum-verified
+```
+
+then set the vision provider to "Real" in Settings → AI analysis.
+(Linux servers also need GL libs: `apt install libgles2 libegl1`.
+Posture is classified from torso keypoint geometry — upright vs lying —
+and a sudden upright→lying transition drives the possible-fall rule.)
+
 Run the backend tests:
 
 ```bash
@@ -91,7 +108,8 @@ safety-monitor/
 │   ├── safety_monitor/
 │   │   ├── camera_sources.py # webcam (OpenCV, optional) + synthetic demo source
 │   │   ├── motion.py         # frame-differencing motion detection (numpy)
-│   │   ├── vision.py         # VisionProvider interface + MockVisionProvider
+│   │   ├── vision.py         # VisionProvider interface + mock/unavailable
+│   │   ├── vision_local.py   # REAL MediaPipe person+pose provider
 │   │   ├── rules.py          # rule engine → hedged safety events
 │   │   ├── store.py          # SQLite events + local snapshots/clips
 │   │   ├── agent_hook.py     # agent hook interface (webhook push + polling pull)

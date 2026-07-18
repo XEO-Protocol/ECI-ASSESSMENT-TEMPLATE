@@ -1,0 +1,5 @@
+# Extra dependencies for REAL on-device vision (ai_provider = "local").
+# The base app runs without these; the mock provider needs nothing extra.
+# Note: on minimal Linux servers mediapipe also needs system GL libraries
+# (Debian/Ubuntu: apt install libgles2 libegl1). macOS needs nothing extra.
+mediapipe>=0.10.14

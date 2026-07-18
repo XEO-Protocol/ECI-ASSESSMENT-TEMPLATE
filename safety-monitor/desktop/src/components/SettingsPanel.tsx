@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { TrashIcon } from '../icons';
-import type { Settings } from '../types';
+import type { Settings, VisionStatus } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 
 interface SettingsPanelProps {
@@ -13,6 +13,19 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
   const [local, setLocal] = useState<Settings>(settings);
   const [status, setStatus] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [vision, setVision] = useState<VisionStatus | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .health()
+      .then((h) => !cancelled && setVision(h.vision))
+      .catch(() => !cancelled && setVision(null));
+    return () => {
+      cancelled = true;
+    };
+    // re-check after every save so provider errors show up immediately
+  }, [settings]);
 
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) =>
     setLocal((prev) => ({ ...prev, [key]: value }));
@@ -137,23 +150,63 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
       <section className="card">
         <h3>AI analysis</h3>
         <p className="card-desc">
-          Provider: <code>{local.ai_provider}</code> — the MVP ships with mock
-          analysis (simulated detections). Real local vision models plug in
-          via the VisionProvider interface in the backend.
+          Choose what analyzes the camera frames. Both options run entirely
+          on this computer.
         </p>
-        <div className="field-inline">
-          <input
-            id="democycle"
-            type="checkbox"
-            checked={local.mock_demo_cycle}
-            onChange={(e) => set('mock_demo_cycle', e.target.checked)}
-          />
-          <label htmlFor="democycle">
-            Demo cycle (mock provider periodically simulates falls,
-            lying-still, smoke and door events so you can see the full
-            pipeline)
-          </label>
+
+        <div className="field">
+          <span className="field-label">
+            Vision provider
+            {vision &&
+              (vision.error ? (
+                <span className="chip chip-alert">Failed</span>
+              ) : vision.real ? (
+                <span className="chip chip-live">
+                  <span className="dot" aria-hidden /> Real — active
+                </span>
+              ) : (
+                <span className="chip chip-sim">Simulated</span>
+              ))}
+          </span>
+          <select
+            value={local.ai_provider}
+            onChange={(e) => set('ai_provider', e.target.value)}
+            aria-label="Vision provider"
+          >
+            <option value="mock">Mock (simulated detections, for demos)</option>
+            <option value="local">
+              Real — local person & pose models (MediaPipe, on-device)
+            </option>
+          </select>
+          {local.ai_provider === 'local' && (
+            <span className="hint">
+              Needs the model files once:{' '}
+              <code>python scripts/download_models.py</code> in the backend
+              folder, then save. Detection stays fully offline.
+            </span>
+          )}
+          {vision?.error && (
+            <span className="hint" style={{ color: 'var(--alert)' }}>
+              {vision.error} — AI analysis is off until this is fixed; the
+              app never substitutes simulated detections.
+            </span>
+          )}
         </div>
+
+        {local.ai_provider === 'mock' && (
+          <div className="field-inline">
+            <input
+              id="democycle"
+              type="checkbox"
+              checked={local.mock_demo_cycle}
+              onChange={(e) => set('mock_demo_cycle', e.target.checked)}
+            />
+            <label htmlFor="democycle">
+              Demo cycle (periodically simulates falls, lying-still, smoke
+              and door events so you can see the full pipeline)
+            </label>
+          </div>
+        )}
       </section>
 
       <section className="card">

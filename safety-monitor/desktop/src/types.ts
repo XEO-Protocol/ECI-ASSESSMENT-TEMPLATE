@@ -67,9 +67,17 @@ export interface Settings {
   notifications_enabled: boolean;
   recording_enabled: boolean;
   paused: boolean;
-  ai_provider: string;
+  ai_provider: string; // "mock" (simulated) or "local" (real on-device models)
   mock_demo_cycle: boolean;
+  models_dir: string;
   cameras: CameraSettings[];
+}
+
+export interface VisionStatus {
+  provider: string;
+  configured: string;
+  real: boolean;
+  error: string | null;
 }
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {

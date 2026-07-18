@@ -112,9 +112,41 @@ class MockVisionProvider(VisionProvider):
         )
 
 
-def create_provider(name: str, *, mock_demo_cycle: bool = True) -> VisionProvider:
+class UnavailableVisionProvider(VisionProvider):
+    """Stand-in used when a configured REAL provider failed to load.
+
+    Emits NO detections, ever. A failed real model must never be silently
+    replaced by simulated analysis — the failure is surfaced in /api/health
+    and the UI instead, and this provider's notes state it plainly.
+    """
+
+    name = "unavailable"
+
+    def __init__(self, wanted: str, reason: str):
+        self.wanted = wanted
+        self.reason = reason
+
+    async def analyze(self, frame: np.ndarray, context: AnalysisContext) -> FrameAnalysis:
+        return FrameAnalysis(
+            provider=self.name,
+            detections=[],
+            notes=(
+                f"Vision provider {self.wanted!r} failed to load ({self.reason}). "
+                "AI analysis is OFF — no simulated detections are substituted."
+            ),
+        )
+
+
+def create_provider(
+    name: str, *, mock_demo_cycle: bool = True, models_dir: str | None = None
+) -> VisionProvider:
     """Factory for vision providers. Extend here to add real models."""
     if name == "mock":
         return MockVisionProvider(demo_cycle=mock_demo_cycle)
-    # e.g. `if name == "yolo-local": return YoloProvider(...)`
-    raise ValueError(f"Unknown AI provider: {name!r} (available: mock)")
+    if name == "local":
+        from .vision_local import LocalVisionProvider
+
+        if not models_dir:
+            raise ValueError("ai_provider 'local' requires a models directory")
+        return LocalVisionProvider(models_dir)
+    raise ValueError(f"Unknown AI provider: {name!r} (available: mock, local)")

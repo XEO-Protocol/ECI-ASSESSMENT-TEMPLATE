@@ -133,8 +133,9 @@ class Settings(BaseModel):
     notifications_enabled: bool = True
     recording_enabled: bool = True  # save snapshots/clips for events
     paused: bool = False  # privacy: pause all capture and analysis
-    ai_provider: str = "mock"
+    ai_provider: str = "mock"  # "mock" (simulated) or "local" (real on-device models)
     mock_demo_cycle: bool = True  # mock provider cycles through demo scenarios
+    models_dir: str = ""  # empty -> <data_dir>/models (see scripts/download_models.py)
     cameras: list[CameraSettings] = Field(default_factory=list)
 
 

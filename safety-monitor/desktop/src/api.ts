@@ -1,4 +1,4 @@
-import type { SafetyEvent, Settings, Zone } from './types';
+import type { SafetyEvent, Settings, VisionStatus, Zone } from './types';
 
 export const BASE_URL = 'http://127.0.0.1:8765';
 
@@ -15,7 +15,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  health: () => request<{ status: string; paused: boolean }>('/api/health'),
+  health: () =>
+    request<{ status: string; paused: boolean; vision: VisionStatus }>(
+      '/api/health',
+    ),
   getSettings: () => request<Settings>('/api/settings'),
   putSettings: (settings: Settings) =>
     request<Settings>('/api/settings', {

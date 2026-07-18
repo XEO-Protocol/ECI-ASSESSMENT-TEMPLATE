@@ -123,6 +123,12 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
             "cameras": {
                 cam_id: {"error": w.error} for cam_id, w in manager.workers.items()
             },
+            "vision": {
+                "provider": manager.provider.name,
+                "configured": config.settings.ai_provider,
+                "real": manager.provider.name == "local",
+                "error": manager.provider_error,
+            },
         }
 
     @app.get("/api/settings", response_model=Settings)
@@ -131,9 +137,15 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
 
     @app.put("/api/settings", response_model=Settings)
     async def put_settings(new_settings: Settings):
-        previous_cameras = config.settings.cameras
+        previous = config.settings
         config.update(new_settings)
-        await manager.apply_settings(previous_cameras)
+        await manager.apply_settings(previous.cameras)
+        if (
+            new_settings.ai_provider != previous.ai_provider
+            or new_settings.mock_demo_cycle != previous.mock_demo_cycle
+            or new_settings.models_dir != previous.models_dir
+        ):
+            await manager.reload_provider()
         return config.settings
 
     # --- cameras --------------------------------------------------------------
