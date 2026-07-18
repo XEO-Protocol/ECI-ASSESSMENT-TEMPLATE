@@ -5,54 +5,48 @@ import { LivePreview } from './components/LivePreview';
 import { SettingsPanel } from './components/SettingsPanel';
 import { ZoneEditor } from './components/ZoneEditor';
 import { useEvents } from './hooks/useEvents';
-import {
-  CameraIcon,
-  LogoIcon,
-  MoonIcon,
-  PauseIcon,
-  PlayIcon,
-  RecordIcon,
-  SettingsIcon,
-  SunIcon,
-  TimelineIcon,
-  ZonesIcon,
-} from './icons';
+import { MoonIcon, PixelEyeIcon, SunIcon } from './icons';
 import { currentTheme, initTheme, setTheme, type Theme } from './theme';
-import type { Settings } from './types';
+import type { Settings, VisionStatus } from './types';
 
 type Tab = 'live' | 'timeline' | 'zones' | 'settings';
 
-const TABS: { id: Tab; label: string; icon: JSX.Element }[] = [
-  { id: 'live', label: 'Live', icon: <CameraIcon /> },
-  { id: 'timeline', label: 'Timeline', icon: <TimelineIcon /> },
-  { id: 'zones', label: 'Zones', icon: <ZonesIcon /> },
-  { id: 'settings', label: 'Settings', icon: <SettingsIcon /> },
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'live', label: 'Live' },
+  { id: 'timeline', label: 'Timeline' },
+  { id: 'zones', label: 'Zones' },
+  { id: 'settings', label: 'Settings' },
 ];
 
-const PAGE_COPY: Record<Tab, { title: string; sub: string }> = {
-  live: {
-    title: 'Live view',
-    sub: 'Watching locally — frames are analyzed and stored on this computer only.',
-  },
-  timeline: {
-    title: 'Timeline',
-    sub: 'Possible events flagged for your review. Nothing here is a certainty.',
-  },
-  zones: {
-    title: 'Zones',
-    sub: 'Draw privacy masks and restricted areas directly on the camera image.',
-  },
-  settings: {
-    title: 'Settings',
-    sub: 'Monitoring behavior, AI analysis, cameras, and your data.',
-  },
-};
-
 initTheme();
+
+function Clock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  return (
+    <div className="clock">
+      <b>
+        {now.toLocaleTimeString(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </b>
+      {now.toLocaleDateString(undefined, {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+      })}
+    </div>
+  );
+}
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('live');
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [vision, setVision] = useState<VisionStatus | null>(null);
   const [backendUp, setBackendUp] = useState(false);
   const [theme, setThemeState] = useState<Theme>(currentTheme());
   const { events, connected, acknowledge } = useEvents(
@@ -63,6 +57,10 @@ export default function App() {
     try {
       setSettings(await api.getSettings());
       setBackendUp(true);
+      api
+        .health()
+        .then((h) => setVision(h.vision))
+        .catch(() => setVision(null));
     } catch {
       setBackendUp(false);
     }
@@ -104,7 +102,7 @@ export default function App() {
     return (
       <div className="boot">
         <div className="boot-logo">
-          <LogoIcon size={30} />
+          <PixelEyeIcon width={38} />
         </div>
         <div className="spinner" aria-hidden />
         <h2>Backend unavailable — reconnecting…</h2>
@@ -119,29 +117,64 @@ export default function App() {
     );
   }
 
-  const copy = PAGE_COPY[tab];
+  // The Live headline is a real reading: it derives from unreviewed
+  // warnings/alerts, and its language stays hedged.
+  const headline =
+    tab === 'live' ? (
+      unacked > 0 ? (
+        <>
+          <span className="loud-alert">Something may need you.</span>
+        </>
+      ) : (
+        <>
+          <span className="quiet">All quiet,</span> nothing needs you.
+        </>
+      )
+    ) : null;
+
+  const PAGE: Record<Tab, { eyebrow: string; sub: string }> = {
+    live: {
+      eyebrow: settings.paused ? 'LIVE // PAUSED' : 'LIVE // WATCHING',
+      sub:
+        unacked > 0
+          ? `${unacked} unreviewed event${unacked > 1 ? 's' : ''} in the timeline · nothing here is a certainty`
+          : 'Frames are analyzed and stored on this computer only',
+    },
+    timeline: {
+      eyebrow: 'TIMELINE // LOGBOOK',
+      sub: 'Possible events flagged for review · nothing here is a certainty',
+    },
+    zones: {
+      eyebrow: 'ZONES // PRIVACY MASKS & RESTRICTED AREAS',
+      sub: 'Masked pixels never leave the pipeline',
+    },
+    settings: {
+      eyebrow: 'SETTINGS // MONITORING · AI · CAMERAS · DATA',
+      sub: 'Everything stays on this machine',
+    },
+  };
 
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">
-            <LogoIcon size={20} />
-          </div>
+          <span className="brand-mark">
+            <PixelEyeIcon width={34} />
+          </span>
           <div>
-            <h1>Safety Monitor</h1>
-            <span className="brand-sub">local-first · private</span>
+            <h1>SENTINEL</h1>
+            <span className="brand-sub">Local watch deck</span>
           </div>
         </div>
 
         <nav className="nav">
-          {TABS.map(({ id, label, icon }) => (
+          {TABS.map(({ id, label }) => (
             <button
               key={id}
               className={`nav-item ${tab === id ? 'active' : ''}`}
+              aria-current={tab === id ? 'page' : undefined}
               onClick={() => setTab(id)}
             >
-              {icon}
               <span>{label}</span>
               {id === 'timeline' && unacked > 0 && (
                 <span className="badge">{unacked}</span>
@@ -153,25 +186,23 @@ export default function App() {
         <div className="privacy-card">
           <span className="card-eyebrow microcaps">Privacy</span>
           <button className="switch-row" onClick={() => void togglePause()}>
-            {settings.paused ? <PlayIcon size={15} /> : <PauseIcon size={15} />}
             <span className="switch-label">
               {settings.paused ? 'Paused' : 'Watching'}
             </span>
             <span
-              className={`switch ${settings.paused ? 'warn-on' : 'on'}`}
+              className={`pill ${settings.paused ? 'warn-on' : 'on'}`}
               aria-hidden
             >
-              <i />
+              {settings.paused ? 'OFF' : 'ON'} <i />
             </span>
           </button>
           <button className="switch-row" onClick={() => void toggleRecording()}>
-            <RecordIcon size={15} />
             <span className="switch-label">Recording</span>
             <span
-              className={`switch ${settings.recording_enabled ? 'on' : ''}`}
+              className={`pill ${settings.recording_enabled ? 'on' : ''}`}
               aria-hidden
             >
-              <i />
+              {settings.recording_enabled ? 'ON' : 'OFF'} <i />
             </span>
           </button>
           <p className="privacy-note">
@@ -183,13 +214,12 @@ export default function App() {
         <div className="side-foot">
           <span className={`conn ${connected ? 'ok' : 'bad'}`}>
             <span className="conn-dot" aria-hidden />
-            {connected ? 'Connected' : 'Reconnecting…'}
-            {settings.paused && ' · paused'}
+            {connected ? 'Link OK' : 'Relinking…'}
           </span>
           <button
             className="theme-btn"
             onClick={toggleTheme}
-            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+            title={`Switch to ${theme === 'dark' ? 'day' : 'night'} face`}
           >
             {theme === 'dark' ? <SunIcon size={15} /> : <MoonIcon size={15} />}
           </button>
@@ -199,13 +229,22 @@ export default function App() {
       <main className="main">
         <header className="page-head">
           <div className="page-titles">
-            <h2>{copy.title}</h2>
-            <p className="page-sub">{copy.sub}</p>
+            <span className="page-eyebrow microcaps">{PAGE[tab].eyebrow}</span>
+            <h2>
+              {headline ??
+                TABS.find((t) => t.id === tab)!.label}
+            </h2>
+            <p className="page-sub">{PAGE[tab].sub}</p>
           </div>
+          <Clock />
         </header>
 
         {tab === 'live' && (
-          <LivePreview cameras={settings.cameras} paused={settings.paused} />
+          <LivePreview
+            cameras={settings.cameras}
+            paused={settings.paused}
+            vision={vision}
+          />
         )}
         {tab === 'timeline' && (
           <EventTimeline

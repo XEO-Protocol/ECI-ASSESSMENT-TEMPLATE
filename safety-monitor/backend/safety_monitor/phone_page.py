@@ -15,13 +15,20 @@ PHONE_PAGE = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="theme-color" content="#0c1113">
+<meta name="theme-color" content="#ece7db">
 <title>Safety Monitor — Phone Camera</title>
 <style>
   :root {
-    --bg:#0c1113; --surface:#12191c; --surface-2:#182126; --border:#233037;
-    --text:#e7edee; --muted:#9bb0b6; --faint:#647a81;
-    --accent:#4cc2b4; --accent-ink:#06211e; --warn:#d9a92f; --alert:#e0574f; --ok:#7ac07e;
+    --bg:#ece7db; --surface:#f4f0e5; --surface-2:#e6e0d0; --border:#c8c1ac;
+    --text:#26231a; --muted:#6f6a58; --faint:#9a937e;
+    --accent:#4e5b3f; --accent-ink:#ece7db; --warn:#a8891f; --alert:#b65c3d; --ok:#55703f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#171510; --surface:#1e1b14; --surface-2:#26221a; --border:#3a3426;
+      --text:#e9e4d5; --muted:#a89f8a; --faint:#7a7260;
+      --accent:#8fa075; --accent-ink:#171510; --warn:#d1b13c; --alert:#d0765a; --ok:#84b06a;
+    }
   }
   * { box-sizing:border-box; }
   body {
@@ -29,8 +36,9 @@ PHONE_PAGE = """<!doctype html>
     background:var(--bg); color:var(--text); min-height:100vh;
     display:flex; flex-direction:column; align-items:center; padding:20px 16px 40px;
   }
-  .mark { width:52px; height:52px; border-radius:14px; background:rgba(76,194,180,.13);
-    display:grid; place-items:center; color:var(--accent); margin:18px 0 10px; }
+  .mark { width:52px; height:52px; border-radius:12px; background:var(--surface);
+    border:1px solid var(--border);
+    display:grid; place-items:center; color:var(--text); margin:18px 0 10px; }
   h1 { font-size:17px; margin:0 0 2px; font-weight:650; }
   .sub { color:var(--faint); font-size:12px; margin:0 0 22px; }
   .card { width:100%; max-width:420px; background:var(--surface); border:1px solid var(--border);

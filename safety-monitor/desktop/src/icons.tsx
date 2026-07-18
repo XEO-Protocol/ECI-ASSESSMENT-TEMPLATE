@@ -33,6 +33,42 @@ export function LogoIcon(props: IconProps) {
   );
 }
 
+/** Bitmap watching eye — the calm-instrument brand mark. The pupil
+ * carries the accent; everything else is ink. */
+export function PixelEyeIcon({
+  width = 34,
+  className,
+}: {
+  width?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={width}
+      height={Math.round((width * 9) / 13)}
+      viewBox="0 0 13 9"
+      fill="currentColor"
+      shapeRendering="crispEdges"
+      className={className}
+      aria-hidden
+    >
+      <rect x="3" y="1" width="7" height="1" />
+      <rect x="1" y="2" width="2" height="1" />
+      <rect x="10" y="2" width="2" height="1" />
+      <rect x="0" y="3" width="1" height="2" />
+      <rect x="12" y="3" width="1" height="2" />
+      <rect x="5" y="3" width="3" height="1" />
+      <rect x="4" y="4" width="2" height="1" />
+      <rect x="7" y="4" width="2" height="1" />
+      <rect x="6" y="4" width="1" height="1" fill="var(--accent)" />
+      <rect x="1" y="5" width="2" height="1" />
+      <rect x="10" y="5" width="2" height="1" />
+      <rect x="5" y="5" width="3" height="1" />
+      <rect x="3" y="6" width="7" height="1" />
+    </svg>
+  );
+}
+
 export function CameraIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

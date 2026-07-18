@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { api, eventSnapshotUrl } from '../api';
-import { AgentIcon, CheckIcon, SeverityIcon } from '../icons';
+import { AgentIcon, CheckIcon } from '../icons';
 import type { EventType, SafetyEvent } from '../types';
 import { EVENT_TYPE_LABELS } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -132,9 +132,6 @@ export function EventTimeline({ events, onAcknowledge }: EventTimelineProps) {
               )}
               <div className="ev-body">
                 <header className="ev-head">
-                  <span className="sev-ico">
-                    <SeverityIcon severity={event.severity} size={17} />
-                  </span>
                   <span className="ev-type">
                     {EVENT_TYPE_LABELS[event.type]}
                   </span>
