@@ -226,13 +226,17 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
               value={camera.source_type}
               onChange={(e) =>
                 setCamera(i, {
-                  source_type: e.target.value as 'webcam' | 'synthetic',
+                  source_type: e.target.value as
+                    | 'webcam'
+                    | 'synthetic'
+                    | 'mjpeg',
                 })
               }
               aria-label="Camera source"
             >
               <option value="synthetic">Synthetic (demo)</option>
               <option value="webcam">Webcam (requires OpenCV)</option>
+              <option value="mjpeg">Network camera (MJPEG stream)</option>
             </select>
             {camera.source_type === 'webcam' && (
               <input
@@ -243,6 +247,15 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
                 onChange={(e) =>
                   setCamera(i, { device_index: Number(e.target.value) })
                 }
+              />
+            )}
+            {camera.source_type === 'mjpeg' && (
+              <input
+                className="grow"
+                placeholder="http://192.168.x.x:port/video"
+                title="MJPEG stream URL (phone/tablet IP-camera app, ESP32-cam, …)"
+                value={camera.url}
+                onChange={(e) => setCamera(i, { url: e.target.value })}
               />
             )}
             <label className="field-inline" style={{ marginBottom: 0 }}>

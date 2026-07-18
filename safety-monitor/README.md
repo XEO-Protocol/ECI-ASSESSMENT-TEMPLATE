@@ -78,6 +78,23 @@ pip install opencv-python
 
 then switch the camera's source to "Webcam" in Settings.
 
+**Phone / tablet / IP camera (MJPEG over the LAN):** any device that can
+serve its camera as an MJPEG HTTP stream works as a camera source — an
+iPad or phone running an "IP camera" app, an ESP32-cam, or a Linux box
+sharing a USB camera. In Settings set the camera source to "Network
+camera (MJPEG)" and paste the stream URL (credentials in the URL are
+honoured: `http://user:pass@192.168.x.x:port/video`). The source is
+bounded by design: http/https only, connect/read timeouts, capped
+buffers, oversized/corrupt frames dropped, and a stalled stream shows
+"no signal" rather than a stale frame. Example one-liner to serve a USB
+camera from a Linux box (PS3 Eye included — the kernel supports it):
+
+```bash
+# on the Linux box with the camera plugged in
+sudo apt install ustreamer && ustreamer --host 0.0.0.0 --port 8080
+# then use http://<that-box>:8080/stream as the camera URL
+```
+
 To use **real vision detection** instead of the mock (person presence,
 posture and fall analysis from actual models, all on-device):
 

@@ -115,7 +115,10 @@ class CameraWorker:
     async def _open_source(self) -> bool:
         try:
             self.source = await asyncio.to_thread(
-                create_source, self.camera.source_type, self.camera.device_index
+                create_source,
+                self.camera.source_type,
+                self.camera.device_index,
+                self.camera.url,
             )
             self.error = None
             return True

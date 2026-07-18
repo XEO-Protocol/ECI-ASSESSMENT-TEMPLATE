@@ -80,7 +80,9 @@ export function LivePreview({ cameras, paused }: LivePreviewProps) {
         <span>
           {camera.source_type === 'synthetic'
             ? 'Synthetic demo scene — switch to your webcam in Settings.'
-            : `Webcam device ${camera.device_index}`}
+            : camera.source_type === 'mjpeg'
+              ? `Network camera: ${camera.url || 'no URL set'}`
+              : `Webcam device ${camera.device_index}`}
         </span>
         {camera.mask_zones.length > 0 && (
           <>

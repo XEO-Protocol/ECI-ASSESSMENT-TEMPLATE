@@ -49,8 +49,9 @@ export interface SafetyEvent {
 export interface CameraSettings {
   id: string;
   name: string;
-  source_type: 'webcam' | 'synthetic';
+  source_type: 'webcam' | 'synthetic' | 'mjpeg';
   device_index: number;
+  url: string; // mjpeg only: http(s) URL of the network camera stream
   enabled: boolean;
   mask_zones: Zone[];
   restricted_zones: Zone[];
