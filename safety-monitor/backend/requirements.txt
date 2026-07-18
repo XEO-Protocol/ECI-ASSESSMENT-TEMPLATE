@@ -1,0 +1,10 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29  # [standard] pulls the websockets lib the /ws/events push needs
+qrcode>=7.4  # pairing QR codes for phone-as-camera onboarding
+numpy>=1.26
+pillow>=10.0
+httpx>=0.27
+pydantic>=2.6
+
+# Optional: real webcam capture (the synthetic demo camera works without it)
+# opencv-python>=4.9
